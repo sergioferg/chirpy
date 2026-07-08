@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sergioferg/chirpy/internal/auth"
 	"github.com/sergioferg/chirpy/internal/database"
 )
 
@@ -22,8 +23,7 @@ type Chirp struct {
 
 func (apiCfg *apiConfig) handlerChirpCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 	type response struct {
 		Chirp
@@ -37,9 +37,21 @@ func (apiCfg *apiConfig) handlerChirpCreate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Missing bearer token", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, apiCfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid/Expired token", err)
+		return
+	}
+
 	chirp, err := apiCfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   params.Body,
-		UserID: params.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		log.Printf("Error creating user: %s", err)

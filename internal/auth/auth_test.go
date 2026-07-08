@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -96,11 +97,11 @@ func TestJWT(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:        "Inalid token",
+			name:        "Invalid token",
 			token:       "someothertoken",
 			secretToken: secretToken1,
 			duration:    quickDuration,
-			wantErr:     false,
+			wantErr:     true,
 		},
 		{
 			name:        "Incorrect secret token",
@@ -127,4 +128,54 @@ func TestJWT(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetToken(t *testing.T) {
+	goodReq, err := http.NewRequest("GET", "/test-path", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	badReq, err := http.NewRequest("GET", "/test-path", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	noHeaderReq, err := http.NewRequest("GET", "/test-path", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	goodReq.Header.Set("Authorization", "Bearer jwtToken")
+	badReq.Header.Set("Authorization", "Bearer")
+
+	tests := []struct {
+		name    string
+		request http.Request
+		wantErr bool
+	}{
+		{
+			name:    "Valid request header",
+			request: *goodReq,
+			wantErr: false,
+		},
+		{
+			name:    "Invalid request header",
+			request: *badReq,
+			wantErr: true,
+		},
+		{
+			name:    "No header in request",
+			request: *noHeaderReq,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := GetBearerToken(tt.request.Header)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetBearerToken() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
 }

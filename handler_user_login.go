@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/sergioferg/chirpy/internal/auth"
 )
@@ -11,6 +12,7 @@ func (apiCfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Password string `json:"password"`
 		Email    string `json:"email"`
+		Expires  int    `json:"expires_in_seconds"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -19,6 +21,11 @@ func (apiCfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
+	}
+	expireSeconds := params.Expires
+
+	if expireSeconds <= 0 || expireSeconds > 3600 {
+		expireSeconds = 3600
 	}
 
 	user, err := apiCfg.db.GetUserByEmail(r.Context(), params.Email)
@@ -37,11 +44,19 @@ func (apiCfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", nil)
 		return
 	}
+	tokenDuration := time.Second * time.Duration(expireSeconds)
+
+	token, err := auth.MakeJWT(user.ID, apiCfg.secret, tokenDuration)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error generating JWT token", err)
+		return
+	}
 
 	respondWithJSON(w, http.StatusOK, User{
 		ID:        user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		Token:     token,
 	})
 }
