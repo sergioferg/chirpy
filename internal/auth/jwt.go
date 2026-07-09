@@ -30,9 +30,12 @@ func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (str
 
 func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	claims := jwt.RegisteredClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, &claims, func(t *jwt.Token) (any, error) {
-		return []byte(tokenSecret), nil
-	})
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		&claims,
+		func(t *jwt.Token) (any, error) {
+			return []byte(tokenSecret), nil
+		})
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -50,11 +53,16 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	return userUUID, nil
 }
 
+var ErrNoAuthHeaderIncluded = errors.New("no auth header included in request")
+
 func GetBearerToken(headers http.Header) (string, error) {
 	bearerString := headers.Get("Authorization")
+	if bearerString == "" {
+		return "", ErrNoAuthHeaderIncluded
+	}
 	bearerSlice := strings.Fields(bearerString)
-	if len(bearerSlice) < 2 {
-		return "", errors.New("Not authorized")
+	if len(bearerSlice) < 2 || bearerSlice[0] != "Bearer" {
+		return "", errors.New("Malformed authorization header")
 	}
 
 	tokenString := bearerSlice[1]

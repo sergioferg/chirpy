@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/sergioferg/chirpy/internal/auth"
 )
 
 func (apiCfg *apiConfig) handlerWebhook(w http.ResponseWriter, r *http.Request) {
@@ -17,9 +18,15 @@ func (apiCfg *apiConfig) handlerWebhook(w http.ResponseWriter, r *http.Request) 
 		} `json:"data"`
 	}
 
+	webhookApiKey, err := auth.GetApiKey(r.Header)
+	if err != nil || webhookApiKey != apiCfg.apiKey {
+		respondWithError(w, http.StatusUnauthorized, "Invalid api key", err)
+		return
+	}
+
 	params := parameters{}
 	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
