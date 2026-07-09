@@ -7,7 +7,7 @@ VALUES (
     $1,
     $2
 )
-RETURNING id, created_at, updated_at, email;
+RETURNING *;
 --
 
 -- name: Reset :exec
@@ -25,5 +25,13 @@ SET email = $1,
     hashed_password = $2,
     updated_at = NOW() AT TIME ZONE 'UTC'
 WHERE id = $3
-RETURNING id, email, created_at, updated_at;
+RETURNING *;
+--
+
+-- name: UpgradeUser :one
+UPDATE users
+SET is_chirpy_red = true,
+    updated_at = NOW() AT TIME ZONE 'UTC'
+WHERE id = $1
+RETURNING *;
 --
