@@ -21,5 +21,5 @@ func (apiCfg *apiConfig) handlerRevokeToken(w http.ResponseWriter, r *http.Reque
 
 	type response struct{}
 
-	respondWithJSON(w, http.StatusNoContent, response{})
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -48,7 +48,7 @@ func (apiCfg *apiConfig) handlerUserUpdate(w http.ResponseWriter, r *http.Reques
 		ID:             userID,
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+		respondWithError(w, http.StatusNotFound, "User doesn't exist", err)
 		return
 	}
 
