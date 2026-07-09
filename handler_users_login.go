@@ -14,6 +14,11 @@ func (apiCfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 		Email    string `json:"email"`
 	}
+	type response struct {
+		User
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
+	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
@@ -41,7 +46,7 @@ func (apiCfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	tokenDuration := time.Duration(1 * time.Hour)
 
-	token, err := auth.MakeJWT(user.ID, apiCfg.secret, tokenDuration)
+	accessToken, err := auth.MakeJWT(user.ID, apiCfg.secret, tokenDuration)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error generating JWT token", err)
 		return
@@ -57,12 +62,14 @@ func (apiCfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, User{
-		ID:           user.ID,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
-		Email:        user.Email,
+	respondWithJSON(w, http.StatusOK, response{
+		User: User{
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email:     user.Email,
+		},
+		Token:        accessToken,
 		RefreshToken: refreshToken,
-		Token:        token,
 	})
 }
